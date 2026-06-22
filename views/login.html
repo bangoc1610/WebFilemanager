@@ -1,1 +1,33 @@
-<!DOCTYPE html><html><body><p>Login placeholder</p></body></html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đăng nhập — Admin</title>
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <div class="login-icon">🔐</div>
+    <h2>Đăng nhập Admin</h2>
+    <div class="error-banner" id="errBanner">Sai tên đăng nhập hoặc mật khẩu</div>
+    <form method="POST" action="/admin/login">
+      <div class="form-group">
+        <label for="username">Tên đăng nhập</label>
+        <input type="text" id="username" name="username" placeholder="Username" required autofocus autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="password">Mật khẩu</label>
+        <input type="password" id="password" name="password" placeholder="Password" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Đăng nhập</button>
+    </form>
+  </div>
+  <script>
+    // Show error banner if redirected back after 401
+    if (document.referrer.includes('/admin/login')) {
+      document.getElementById('errBanner').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
