@@ -37,6 +37,46 @@ router.get('/', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'views', 'admin.html'));
 });
 
-// ─── Placeholders for Tasks 6-8 ──────
+// ─── Groups ─────────────────────────────────────────────────
+
+router.post('/groups', requireAuth, (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Tên nhóm không được để trống' });
+  const groups = readJSON('groups');
+  const entry = { id: uuidv4(), name: name.trim(), createdAt: new Date().toISOString() };
+  groups.push(entry);
+  writeJSON('groups', groups);
+  res.json(entry);
+});
+
+router.delete('/groups/:id', requireAuth, (req, res) => {
+  let groups = readJSON('groups');
+  const before = groups.length;
+  groups = groups.filter(g => g.id !== req.params.id);
+  if (groups.length === before) return res.status(404).json({ error: 'Không tìm thấy nhóm' });
+  writeJSON('groups', groups);
+  res.json({ ok: true });
+});
+
+// ─── Categories ──────────────────────────────────────────────
+
+router.post('/categories', requireAuth, (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Tên loại không được để trống' });
+  const cats = readJSON('categories');
+  const entry = { id: uuidv4(), name: name.trim(), createdAt: new Date().toISOString() };
+  cats.push(entry);
+  writeJSON('categories', cats);
+  res.json(entry);
+});
+
+router.delete('/categories/:id', requireAuth, (req, res) => {
+  let cats = readJSON('categories');
+  const before = cats.length;
+  cats = cats.filter(c => c.id !== req.params.id);
+  if (cats.length === before) return res.status(404).json({ error: 'Không tìm thấy loại' });
+  writeJSON('categories', cats);
+  res.json({ ok: true });
+});
 
 module.exports = router;

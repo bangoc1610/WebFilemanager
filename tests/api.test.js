@@ -69,3 +69,63 @@ test('POST /admin/login with correct credentials redirects to /admin', async () 
   expect(res.status).toBe(302);
   expect(res.headers.location).toBe('/admin');
 });
+
+// ─── Groups & Categories ─────────────────────────────────────
+
+let adminAgent;
+
+beforeAll(async () => {
+  adminAgent = request.agent(app);
+  await adminAgent.post('/admin/login').type('form').send({ username: 'admin', password: 'password' });
+});
+
+test('POST /admin/groups creates a group', async () => {
+  const res = await adminAgent
+    .post('/admin/groups')
+    .set('Content-Type', 'application/json')
+    .send({ name: 'Nhân sự' });
+  expect(res.status).toBe(200);
+  expect(res.body.name).toBe('Nhân sự');
+  expect(res.body.id).toBeDefined();
+});
+
+test('POST /admin/groups with empty name returns 400', async () => {
+  const res = await adminAgent
+    .post('/admin/groups')
+    .set('Content-Type', 'application/json')
+    .send({ name: '   ' });
+  expect(res.status).toBe(400);
+});
+
+test('DELETE /admin/groups/:id removes the group', async () => {
+  const createRes = await adminAgent
+    .post('/admin/groups')
+    .set('Content-Type', 'application/json')
+    .send({ name: 'ToDelete' });
+  const id = createRes.body.id;
+  const delRes = await adminAgent.delete(`/admin/groups/${id}`);
+  expect(delRes.status).toBe(200);
+  const groups = readJSON('groups');
+  expect(groups.find(g => g.id === id)).toBeUndefined();
+});
+
+test('POST /admin/categories creates a category', async () => {
+  const res = await adminAgent
+    .post('/admin/categories')
+    .set('Content-Type', 'application/json')
+    .send({ name: 'Hợp đồng' });
+  expect(res.status).toBe(200);
+  expect(res.body.name).toBe('Hợp đồng');
+});
+
+test('DELETE /admin/categories/:id removes the category', async () => {
+  const createRes = await adminAgent
+    .post('/admin/categories')
+    .set('Content-Type', 'application/json')
+    .send({ name: 'TmpCat' });
+  const id = createRes.body.id;
+  const delRes = await adminAgent.delete(`/admin/categories/${id}`);
+  expect(delRes.status).toBe(200);
+  const cats = readJSON('categories');
+  expect(cats.find(c => c.id === id)).toBeUndefined();
+});
