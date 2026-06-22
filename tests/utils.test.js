@@ -35,3 +35,28 @@ test('appendLog adds entry with createdAt to logs.json', () => {
   expect(logs[0].createdAt).toBeDefined();
   expect(logs[0].ip).toBe('127.0.0.1');
 });
+
+const { validateExtension, generateStoredName } = require('../utils/fileHelper');
+
+test('validateExtension blocks .php', () => {
+  expect(validateExtension('shell.php').ok).toBe(false);
+});
+
+test('validateExtension blocks .exe', () => {
+  expect(validateExtension('virus.exe').ok).toBe(false);
+});
+
+test('validateExtension blocks .js', () => {
+  expect(validateExtension('script.js').ok).toBe(false);
+});
+
+test('validateExtension allows .pdf', () => {
+  const result = validateExtension('report.pdf');
+  expect(result.ok).toBe(true);
+  expect(result.ext).toBe('.pdf');
+});
+
+test('generateStoredName returns uuid.ext pattern', () => {
+  const name = generateStoredName('report.pdf');
+  expect(name).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/);
+});
