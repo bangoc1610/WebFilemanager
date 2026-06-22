@@ -215,3 +215,49 @@ test('GET /admin/logs returns array of log entries', async () => {
   expect(res.body.length).toBeGreaterThan(0);
   expect(res.body[0].action).toBeDefined();
 });
+
+// ─── Download ────────────────────────────────────────────────
+
+test('GET /download/:id streams file with original filename', async () => {
+  const tmpFile = path.join(__dirname, 'downloadable.pdf');
+  fs.writeFileSync(tmpFile, 'downloadable content');
+
+  const uploadRes = await adminAgent
+    .post('/admin/upload')
+    .attach('file', tmpFile)
+    .field('groupId', 'g1')
+    .field('categoryId', 'c1')
+    .field('displayName', 'Download me');
+  fs.unlinkSync(tmpFile);
+
+  const fileId = uploadRes.body.id;
+  const res = await request(app).get(`/download/${fileId}`);
+  expect(res.status).toBe(200);
+  expect(res.headers['content-disposition']).toContain('downloadable.pdf');
+});
+
+test('GET /download/:id increments downloadCount', async () => {
+  const tmpFile = path.join(__dirname, 'counter.pdf');
+  fs.writeFileSync(tmpFile, 'counter test');
+
+  const uploadRes = await adminAgent
+    .post('/admin/upload')
+    .attach('file', tmpFile)
+    .field('groupId', 'g1')
+    .field('categoryId', 'c1')
+    .field('displayName', 'Counter test');
+  fs.unlinkSync(tmpFile);
+
+  const fileId = uploadRes.body.id;
+  await request(app).get(`/download/${fileId}`);
+  await request(app).get(`/download/${fileId}`);
+
+  const files = readJSON('files');
+  const file = files.find(f => f.id === fileId);
+  expect(file.downloadCount).toBe(2);
+});
+
+test('GET /download/:id returns 404 for unknown id', async () => {
+  const res = await request(app).get('/download/totally-unknown-id');
+  expect(res.status).toBe(404);
+});
