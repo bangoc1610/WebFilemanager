@@ -1,4 +1,12 @@
 require('dotenv').config();
+
+// Startup validation
+const _MB = parseInt(process.env.MAX_FILE_SIZE_MB, 10);
+if (!process.env.SESSION_SECRET) throw new Error('SESSION_SECRET is required in .env');
+if (!process.env.ADMIN_USERNAME) throw new Error('ADMIN_USERNAME is required in .env');
+if (!process.env.ADMIN_PASSWORD) throw new Error('ADMIN_PASSWORD is required in .env');
+if (isNaN(_MB) || _MB <= 0) throw new Error('MAX_FILE_SIZE_MB must be a positive integer in .env');
+
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
@@ -24,7 +32,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { httpOnly: true, sameSite: 'lax' },

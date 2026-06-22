@@ -5,6 +5,7 @@ process.env.STORAGE_BASE = path.join(__dirname, 'tmp-api-storage');
 process.env.SESSION_SECRET = 'test-secret';
 process.env.ADMIN_USERNAME = 'admin';
 process.env.ADMIN_PASSWORD = 'password';
+process.env.MAX_FILE_SIZE_MB = process.env.MAX_FILE_SIZE_MB || '100';
 
 const request = require('supertest');
 const app = require('../server');
@@ -53,12 +54,13 @@ test('GET /admin redirects to /admin/login when unauthenticated', async () => {
   expect(res.headers.location).toContain('/admin/login');
 });
 
-test('POST /admin/login with wrong password returns 401', async () => {
+test('POST /admin/login with wrong password redirects to login with error', async () => {
   const res = await request(app)
     .post('/admin/login')
     .type('form')
     .send({ username: 'admin', password: 'wrong' });
-  expect(res.status).toBe(401);
+  expect(res.status).toBe(302);
+  expect(res.headers.location).toContain('/admin/login?error=1');
 });
 
 test('POST /admin/login with correct credentials redirects to /admin', async () => {

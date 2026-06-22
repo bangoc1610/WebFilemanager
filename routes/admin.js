@@ -4,7 +4,7 @@ const router = express.Router();
 const { requireAuth } = require('../utils/auth');
 const { appendLog } = require('../utils/logger');
 const { readJSON, writeJSON } = require('../utils/storage');
-const { validateExtension, generateStoredName } = require('../utils/fileHelper');
+const { validateExtension, generateStoredName, resolveStoredFilePath } = require('../utils/fileHelper');
 const { randomUUID: uuidv4 } = require('crypto');
 const multer = require('multer');
 const fs = require('fs');
@@ -26,7 +26,8 @@ router.post('/login', (req, res) => {
     appendLog({ action: 'login', ip, userAgent });
     return res.redirect('/admin');
   }
-  res.status(401).sendFile(path.join(__dirname, '..', 'views', 'login.html'));
+  appendLog({ action: 'login_fail', ip, userAgent });
+  return res.redirect('/admin/login?error=1');
 });
 
 router.post('/logout', (req, res) => {
@@ -86,7 +87,7 @@ function filesDir() {
   return path.join(base, 'files');
 }
 
-const MAX_MB = parseInt(process.env.MAX_FILE_SIZE_MB || '100', 10);
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB, 10) * 1024 * 1024;
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, filesDir()),
@@ -99,14 +100,17 @@ function fileFilter(req, file, cb) {
   cb(null, true);
 }
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_MB * 1024 * 1024 } });
+const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_FILE_SIZE } });
 
 router.post('/upload', requireAuth, (req, res) => {
   upload.single('file')(req, res, (err) => {
-    if (err && err.message === 'BLOCKED_EXT') {
-      return res.status(400).json({ error: 'Loại file này không được phép upload' });
+    if (err) {
+      if (err.message && err.message.startsWith('BLOCKED_EXT')) {
+        return res.status(400).json({ error: 'Định dạng file không được phép.' });
+      }
+      console.error('[upload error]', err.message);
+      return res.status(500).json({ error: 'Lỗi hệ thống khi upload file.' });
     }
-    if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'Chưa chọn file nào' });
 
     const { groupId, categoryId, displayName } = req.body;
@@ -142,14 +146,12 @@ router.delete('/files/:id', requireAuth, (req, res) => {
   const file = files.find(f => f.id === req.params.id);
   if (!file) return res.status(404).json({ error: 'Không tìm thấy file' });
 
-  const base = process.env.STORAGE_BASE || path.join(__dirname, '..', 'storage');
-  const filePath = path.join(base, 'files', file.storedName);
-  const resolved = path.resolve(filePath);
-  const expectedPrefix = path.resolve(path.join(base, 'files'));
-
-  // Path traversal check
-  if (!resolved.startsWith(expectedPrefix + path.sep) && resolved !== expectedPrefix) {
-    return res.status(400).json({ error: 'Đường dẫn không hợp lệ' });
+  let resolved;
+  try {
+    resolved = resolveStoredFilePath(file.storedName);
+  } catch (e) {
+    if (e.code === 'PATH_TRAVERSAL') return res.status(400).json({ error: 'Invalid path' });
+    return res.status(500).json({ error: 'Lỗi hệ thống' });
   }
 
   try { fs.unlinkSync(resolved); } catch { /* file may already be missing */ }

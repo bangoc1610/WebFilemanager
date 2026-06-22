@@ -3,6 +3,7 @@ const path = require('path');
 const router = express.Router();
 const { readJSON, writeJSON } = require('../utils/storage');
 const { appendLog } = require('../utils/logger');
+const { resolveStoredFilePath } = require('../utils/fileHelper');
 
 router.get('/:id', (req, res) => {
   const files = readJSON('files');
@@ -10,14 +11,12 @@ router.get('/:id', (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Không tìm thấy file' });
 
   const file = files[idx];
-  const base = process.env.STORAGE_BASE || path.join(__dirname, '..', 'storage');
-  const filePath = path.join(base, 'files', file.storedName);
-  const resolved = path.resolve(filePath);
-  const expectedPrefix = path.resolve(path.join(base, 'files'));
-
-  // Path traversal check
-  if (!resolved.startsWith(expectedPrefix + path.sep) && resolved !== expectedPrefix) {
-    return res.status(400).json({ error: 'Đường dẫn không hợp lệ' });
+  let resolved;
+  try {
+    resolved = resolveStoredFilePath(file.storedName);
+  } catch (e) {
+    if (e.code === 'PATH_TRAVERSAL') return res.status(400).json({ error: 'Invalid path' });
+    return res.status(500).json({ error: 'Lỗi hệ thống' });
   }
 
   // Increment download count
