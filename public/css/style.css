@@ -131,6 +131,10 @@ header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; }
 }
 
 .btn-download:hover { background: #1D4ED8; }
+.btn-download.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
 
 .empty-state {
   text-align: center;

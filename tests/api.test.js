@@ -259,6 +259,24 @@ test('GET /download/:id increments downloadCount', async () => {
   expect(file.downloadCount).toBe(2);
 });
 
+test('uploaded media keeps its MIME type for mobile sharing', async () => {
+  const tmpFile = path.join(__dirname, 'photo.png');
+  fs.writeFileSync(tmpFile, Buffer.from('fake png'));
+
+  const uploadRes = await adminAgent
+    .post('/admin/upload')
+    .attach('file', tmpFile)
+    .field('displayName', 'Mobile photo');
+  fs.unlinkSync(tmpFile);
+
+  expect(uploadRes.status).toBe(200);
+  expect(uploadRes.body.mimeType).toBe('image/png');
+
+  const res = await request(app).get(`/download/${uploadRes.body.id}`);
+  expect(res.status).toBe(200);
+  expect(res.headers['content-type']).toContain('image/png');
+});
+
 test('GET /download/:id returns 404 for unknown id', async () => {
   const res = await request(app).get('/download/totally-unknown-id');
   expect(res.status).toBe(404);

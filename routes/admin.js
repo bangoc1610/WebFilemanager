@@ -128,6 +128,7 @@ router.post('/upload', requireAuth, (req, res) => {
       groupId: groupId || null,
       categoryId: categoryId || null,
       size: req.file.size,
+      mimeType: req.file.mimetype,
       uploadedAt: new Date().toISOString(),
       downloadCount: 0,
     };
