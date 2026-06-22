@@ -1,1 +1,36 @@
-<!DOCTYPE html><html><body><p>Client placeholder</p></body></html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kho Tài Liệu</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>📁 Kho Tài Liệu</h1>
+    <div class="search-box">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="searchInput" type="search" placeholder="Tìm kiếm tài liệu..." autocomplete="off" />
+    </div>
+  </header>
+
+  <div class="filters">
+    <label for="groupFilter">Nhóm:</label>
+    <select id="groupFilter">
+      <option value="">-- Tất cả --</option>
+    </select>
+    <label for="catFilter">Loại:</label>
+    <select id="catFilter">
+      <option value="">-- Tất cả --</option>
+    </select>
+  </div>
+
+  <div class="container">
+    <div class="results-info" id="resultsInfo">Đang tải...</div>
+    <div class="file-grid" id="fileGrid"></div>
+  </div>
+
+  <script src="/js/client.js"></script>
+</body>
+</html>
