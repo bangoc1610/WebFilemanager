@@ -44,3 +44,28 @@ test('GET /api/categories returns seeded category', async () => {
   expect(res.status).toBe(200);
   expect(res.body[0].name).toBe('Báo cáo');
 });
+
+// ─── Auth ────────────────────────────────────────────────────
+
+test('GET /admin redirects to /admin/login when unauthenticated', async () => {
+  const res = await request(app).get('/admin');
+  expect(res.status).toBe(302);
+  expect(res.headers.location).toContain('/admin/login');
+});
+
+test('POST /admin/login with wrong password returns 401', async () => {
+  const res = await request(app)
+    .post('/admin/login')
+    .type('form')
+    .send({ username: 'admin', password: 'wrong' });
+  expect(res.status).toBe(401);
+});
+
+test('POST /admin/login with correct credentials redirects to /admin', async () => {
+  const res = await request(app)
+    .post('/admin/login')
+    .type('form')
+    .send({ username: 'admin', password: 'password' });
+  expect(res.status).toBe(302);
+  expect(res.headers.location).toBe('/admin');
+});
