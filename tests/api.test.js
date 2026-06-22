@@ -277,6 +277,36 @@ test('uploaded media keeps its MIME type for mobile sharing', async () => {
   expect(res.headers['content-type']).toContain('image/png');
 });
 
+test('GET /download/:id/media serves media inline for iOS Photos flow', async () => {
+  const tmpFile = path.join(__dirname, 'ios-photo.jpg');
+  fs.writeFileSync(tmpFile, Buffer.from('fake jpg'));
+
+  const uploadRes = await adminAgent
+    .post('/admin/upload')
+    .attach('file', tmpFile)
+    .field('displayName', 'iOS photo');
+  fs.unlinkSync(tmpFile);
+
+  const res = await request(app).get(`/download/${uploadRes.body.id}/media`);
+  expect(res.status).toBe(200);
+  expect(res.headers['content-type']).toContain('image/jpeg');
+  expect(res.headers['content-disposition']).toBe('inline');
+});
+
+test('GET /download/:id/media rejects non-media files', async () => {
+  const tmpFile = path.join(__dirname, 'not-media.pdf');
+  fs.writeFileSync(tmpFile, Buffer.from('fake pdf'));
+
+  const uploadRes = await adminAgent
+    .post('/admin/upload')
+    .attach('file', tmpFile)
+    .field('displayName', 'Not media');
+  fs.unlinkSync(tmpFile);
+
+  const res = await request(app).get(`/download/${uploadRes.body.id}/media`);
+  expect(res.status).toBe(415);
+});
+
 test('GET /download/:id returns 404 for unknown id', async () => {
   const res = await request(app).get('/download/totally-unknown-id');
   expect(res.status).toBe(404);

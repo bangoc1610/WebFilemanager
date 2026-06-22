@@ -44,6 +44,11 @@ function isMobileDevice() {
       || window.matchMedia('(max-width: 900px)').matches);
 }
 
+function isIOSDevice() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function canUseNativeMediaSave(file) {
   if (!isMobileDevice() || !navigator.share || !navigator.canShare || typeof File === 'undefined') {
     return false;
@@ -91,9 +96,15 @@ function renderFiles(files) {
     const group = getGroupName(f.groupId);
     const cat = getCatName(f.categoryId);
     const date = new Date(f.uploadedAt).toLocaleDateString('vi-VN');
-    const nativeMediaSave = canUseNativeMediaSave(f);
-    const buttonLabel = nativeMediaSave ? 'Lưu vào Ảnh' : 'Tải xuống';
+    const iosMediaPreview = isIOSDevice() && Boolean(getMediaMimeType(f));
+    const nativeMediaSave = !iosMediaPreview && canUseNativeMediaSave(f);
+    const buttonLabel = iosMediaPreview
+      ? 'Mở để lưu vào Ảnh'
+      : (nativeMediaSave ? 'Lưu vào Ảnh' : 'Tải xuống');
     const mediaAttribute = nativeMediaSave ? ' data-native-media-save="true"' : '';
+    const href = iosMediaPreview
+      ? `/download/${encodeURIComponent(f.id)}/media`
+      : `/download/${encodeURIComponent(f.id)}`;
     return `<div class="file-card">
       <div class="file-icon">${getIcon(f.originalName)}</div>
       <div class="file-name">${escapeHtml(f.displayName)}</div>
@@ -102,7 +113,7 @@ function renderFiles(files) {
         ${cat ? `<span class="tag">${escapeHtml(cat)}</span>` : ''}
       </div>
       <div class="file-meta">${formatSize(f.size)} &bull; ${date}</div>
-      <a class="btn-download" href="/download/${encodeURIComponent(f.id)}" data-file-id="${escapeHtml(f.id)}"${mediaAttribute}>⬇ ${buttonLabel}</a>
+      <a class="btn-download" href="${href}" data-file-id="${escapeHtml(f.id)}"${mediaAttribute}>⬇ ${buttonLabel}</a>
     </div>`;
   }).join('');
 }
