@@ -79,4 +79,60 @@ router.delete('/categories/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Upload ─────────────────────────────────────────────────
+
+function filesDir() {
+  const base = process.env.STORAGE_BASE || path.join(__dirname, '..', 'storage');
+  return path.join(base, 'files');
+}
+
+const MAX_MB = parseInt(process.env.MAX_FILE_SIZE_MB || '100', 10);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, filesDir()),
+  filename: (req, file, cb) => cb(null, generateStoredName(file.originalname)),
+});
+
+function fileFilter(req, file, cb) {
+  const { ok } = validateExtension(file.originalname);
+  if (!ok) return cb(new Error('BLOCKED_EXT'));
+  cb(null, true);
+}
+
+const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_MB * 1024 * 1024 } });
+
+router.post('/upload', requireAuth, (req, res) => {
+  upload.single('file')(req, res, (err) => {
+    if (err && err.message === 'BLOCKED_EXT') {
+      return res.status(400).json({ error: 'Loại file này không được phép upload' });
+    }
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'Chưa chọn file nào' });
+
+    const { groupId, categoryId, displayName } = req.body;
+    if (!displayName || !displayName.trim()) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'Tên hiển thị không được để trống' });
+    }
+
+    const files = readJSON('files');
+    const entry = {
+      id: uuidv4(),
+      originalName: req.file.originalname,
+      storedName: req.file.filename,
+      displayName: displayName.trim(),
+      groupId: groupId || null,
+      categoryId: categoryId || null,
+      size: req.file.size,
+      uploadedAt: new Date().toISOString(),
+      downloadCount: 0,
+    };
+    files.push(entry);
+    writeJSON('files', files);
+
+    appendLog({ action: 'upload', fileId: entry.id, fileName: entry.originalName, ip: req.ip, userAgent: req.get('user-agent') || '' });
+    res.json(entry);
+  });
+});
+
 module.exports = router;

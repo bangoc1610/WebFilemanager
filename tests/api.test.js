@@ -129,3 +129,51 @@ test('DELETE /admin/categories/:id removes the category', async () => {
   const cats = readJSON('categories');
   expect(cats.find(c => c.id === id)).toBeUndefined();
 });
+
+// ─── Upload ──────────────────────────────────────────────────
+
+test('POST /admin/upload stores file and returns entry', async () => {
+  const tmpFile = path.join(__dirname, 'test-upload.pdf');
+  fs.writeFileSync(tmpFile, 'fake pdf content');
+
+  const res = await adminAgent
+    .post('/admin/upload')
+    .attach('file', tmpFile)
+    .field('groupId', 'g1')
+    .field('categoryId', 'c1')
+    .field('displayName', 'Tài liệu test');
+
+  fs.unlinkSync(tmpFile);
+  expect(res.status).toBe(200);
+  expect(res.body.displayName).toBe('Tài liệu test');
+  expect(res.body.id).toBeDefined();
+  expect(res.body.storedName).toMatch(/\.pdf$/);
+});
+
+test('POST /admin/upload blocks .exe files', async () => {
+  const tmpFile = path.join(__dirname, 'virus.exe');
+  fs.writeFileSync(tmpFile, 'bad');
+
+  const res = await adminAgent
+    .post('/admin/upload')
+    .attach('file', tmpFile)
+    .field('groupId', 'g1')
+    .field('categoryId', 'c1')
+    .field('displayName', 'Bad');
+
+  fs.unlinkSync(tmpFile);
+  expect(res.status).toBe(400);
+});
+
+test('POST /admin/upload without displayName returns 400', async () => {
+  const tmpFile = path.join(__dirname, 'nodisplay.pdf');
+  fs.writeFileSync(tmpFile, 'content');
+
+  const res = await adminAgent
+    .post('/admin/upload')
+    .attach('file', tmpFile)
+    .field('displayName', '   ');
+
+  try { fs.unlinkSync(tmpFile); } catch {}
+  expect(res.status).toBe(400);
+});
