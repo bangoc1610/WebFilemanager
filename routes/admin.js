@@ -135,4 +135,36 @@ router.post('/upload', requireAuth, (req, res) => {
   });
 });
 
+// ─── Delete File ─────────────────────────────────────────────
+
+router.delete('/files/:id', requireAuth, (req, res) => {
+  let files = readJSON('files');
+  const file = files.find(f => f.id === req.params.id);
+  if (!file) return res.status(404).json({ error: 'Không tìm thấy file' });
+
+  const base = process.env.STORAGE_BASE || path.join(__dirname, '..', 'storage');
+  const filePath = path.join(base, 'files', file.storedName);
+  const resolved = path.resolve(filePath);
+  const expectedPrefix = path.resolve(path.join(base, 'files'));
+
+  // Path traversal check
+  if (!resolved.startsWith(expectedPrefix + path.sep) && resolved !== expectedPrefix) {
+    return res.status(400).json({ error: 'Đường dẫn không hợp lệ' });
+  }
+
+  try { fs.unlinkSync(resolved); } catch { /* file may already be missing */ }
+
+  files = files.filter(f => f.id !== req.params.id);
+  writeJSON('files', files);
+  appendLog({ action: 'delete', fileId: req.params.id, fileName: file.originalName, ip: req.ip, userAgent: req.get('user-agent') || '' });
+  res.json({ ok: true });
+});
+
+// ─── Logs ────────────────────────────────────────────────────
+
+router.get('/logs', requireAuth, (req, res) => {
+  const logs = readJSON('logs');
+  res.json(logs.slice(-100).reverse());
+});
+
 module.exports = router;

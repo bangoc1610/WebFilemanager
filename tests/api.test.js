@@ -177,3 +177,41 @@ test('POST /admin/upload without displayName returns 400', async () => {
   try { fs.unlinkSync(tmpFile); } catch {}
   expect(res.status).toBe(400);
 });
+
+// ─── Delete & Logs ───────────────────────────────────────────
+
+test('DELETE /admin/files/:id removes JSON entry and physical file', async () => {
+  const tmpFile = path.join(__dirname, 'to-delete.pdf');
+  fs.writeFileSync(tmpFile, 'delete me');
+
+  const uploadRes = await adminAgent
+    .post('/admin/upload')
+    .attach('file', tmpFile)
+    .field('groupId', 'g1')
+    .field('categoryId', 'c1')
+    .field('displayName', 'Xóa tôi');
+  fs.unlinkSync(tmpFile);
+
+  const fileId = uploadRes.body.id;
+  const storedName = uploadRes.body.storedName;
+  const storedPath = path.join(tmpBase, 'files', storedName);
+  expect(fs.existsSync(storedPath)).toBe(true);
+
+  const delRes = await adminAgent.delete(`/admin/files/${fileId}`);
+  expect(delRes.status).toBe(200);
+  expect(fs.existsSync(storedPath)).toBe(false);
+  expect(readJSON('files').find(f => f.id === fileId)).toBeUndefined();
+});
+
+test('DELETE /admin/files/:id returns 404 for unknown id', async () => {
+  const res = await adminAgent.delete('/admin/files/nonexistent-id');
+  expect(res.status).toBe(404);
+});
+
+test('GET /admin/logs returns array of log entries', async () => {
+  const res = await adminAgent.get('/admin/logs');
+  expect(res.status).toBe(200);
+  expect(Array.isArray(res.body)).toBe(true);
+  expect(res.body.length).toBeGreaterThan(0);
+  expect(res.body[0].action).toBeDefined();
+});
